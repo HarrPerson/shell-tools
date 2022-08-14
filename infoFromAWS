@@ -1,0 +1,41 @@
+#!/bin/bash
+
+AWS_ACCESS_KEY_ID="<set me in .env file>"
+AWS_SECRET_ACCESS_KEY="<set me in .env file>"
+
+export $(cat .env | xargs)
+
+BUCKET_NAME="dupli-backups"
+
+info_from_duplicity() {
+
+   DEST_FOLDER=${1}
+
+   echo "Info for BACKUP ${DEST_FOLDER}"
+   date | tee -a ${LOG_ERR} ${LOG_STD}
+
+   dupl_cmd="/snap/bin/duplicity collection-status \
+      --progress \
+      boto+s3://${BUCKET_NAME}/${DEST_FOLDER}/"
+   echo "${dupl_cmd}"
+   bash -c "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} ${dupl_cmd}"
+   echo "########################################"
+}
+
+
+
+info_from_duplicity "John"
+info_from_duplicity "gitea"
+info_from_duplicity "Michi"
+info_from_duplicity "mongo"
+info_from_duplicity "resilio"
+info_from_duplicity "together"
+info_from_duplicity "influxdb"
+info_from_duplicity "backups_general"
+info_from_duplicity "bitwarden"
+
+
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
+
+exit 0

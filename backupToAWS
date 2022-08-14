@@ -1,0 +1,61 @@
+#!/bin/bash
+
+
+if [ $(whoami) != "root" ]; then
+   echo "please to the root"
+   exit 5
+fi
+
+AWS_ACCESS_KEY_ID="<set me in .env file>"
+AWS_SECRET_ACCESS_KEY="<set me in .env file>"
+
+export $(cat .env | xargs)
+GPG_KEYID="<set me in .env file>"
+BUCKET_NAME="dupli-backups"
+LOGFOLDER="/home/john/dupli_logs"
+
+DATESTR=`date +%Y-%m-%d_%H%M`
+
+backup_to_duplicity() {
+
+   SOURCE_FOLDER=${1}
+   DEST_FOLDER=${2}
+
+   LOG_ERR="${LOGFOLDER}/dupli.${DEST_FOLDER}.${DATESTR}.err.log"
+   LOG_STD="${LOGFOLDER}/dupli.${DEST_FOLDER}.${DATESTR}.std.log"
+
+
+   echo "BACKUP ${SOURCE_FOLDER}" | tee -a ${LOG_ERR} ${LOG_STD}
+   date | tee -a ${LOG_ERR} ${LOG_STD}
+
+
+   dupl_cmd="/snap/bin/duplicity --full-if-older-than 180D \
+      --encrypt-key=${GPG_KEYID} \
+      --progress \
+      --s3-use-deep-archive \
+      --volsize 700 \
+      ${SOURCE_FOLDER} \
+      boto+s3://${BUCKET_NAME}/${DEST_FOLDER}/ \
+      2>> ${LOG_ERR} 1>> ${LOG_STD}"
+
+   echo "${dupl_cmd}"
+   bash -c "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} ${dupl_cmd}"
+}
+
+
+
+backup_to_duplicity "/media/wdmybook/John/" "John"
+backup_to_duplicity "/media/wdmybook/gitea/" "gitea"
+backup_to_duplicity "/media/wdmybook/Michi/" "Michi"
+backup_to_duplicity "/media/wdmybook/mongo/" "mongo"
+backup_to_duplicity "/media/wdmybook/resilio/" "resilio"
+backup_to_duplicity "/media/wdmybook/together/" "together"
+backup_to_duplicity "/media/wdmybook/influxdb/" "influxdb"
+backup_to_duplicity "/media/wdmybook/backups/" "backups_general"
+backup_to_duplicity "/media/wdmybook/bitwarden/" "bitwarden"
+
+
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
+
+exit 0
